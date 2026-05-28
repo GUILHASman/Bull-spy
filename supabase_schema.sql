@@ -40,7 +40,21 @@ CREATE TABLE IF NOT EXISTS user_usage (
     last_use TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Políticas de Segurança (RLS) - Evita erro de duplicado
+-- 6. Tabela para referências de convites (quem convidou quem)
+-- Dá bônus de 1 uso do !check por cada pessoa que convidou
+CREATE TABLE IF NOT EXISTS invite_referrals (
+    id SERIAL PRIMARY KEY,
+    inviter_id TEXT NOT NULL,
+    invited_id TEXT NOT NULL,
+    guild_id TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(invited_id, guild_id)
+);
+
+-- Índice para buscar bônus por inviter
+CREATE INDEX IF NOT EXISTS idx_invite_referrals_inviter ON invite_referrals(inviter_id);
+
+-- 7. Políticas de Segurança (RLS) - Evita erro de duplicado
 ALTER TABLE server_members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all access" ON server_members;
 CREATE POLICY "Allow all access" ON server_members FOR ALL USING (true) WITH CHECK (true);

@@ -1,4 +1,4 @@
-const { getCheatServers, isWhitelisted, logDetection, getUserUsage, incrementUserUsage } = require('../database/supabase');
+const { getCheatServers, isWhitelisted, logDetection, getUserUsage, incrementUserUsage, getInviteBonus } = require('../database/supabase');
 const { authorizedUsers, usageLogChannelId } = require('../config');
 
 // Configuração de Canais e Idiomas
@@ -9,7 +9,7 @@ const CHANNELS = {
 
 const STRINGS = {
     PT: {
-        usageLimit: '❌ Já atingiste o limite de 10 utilizações gratuitas.',
+        usageLimit: (limit) => `❌ Já atingiste o limite de ${limit} utilizações gratuitas.`,
         wrongChannel: '❌ Este comando só pode ser usado nos canais de consulta pública.',
         checking: '🔍 A verificar ID...',
         whitelisted: '⚪ Este utilizador está na **Whitelist** e é considerado seguro.',
@@ -18,7 +18,7 @@ const STRINGS = {
         usageLeft: (remain) => `\n*Ainda tens ${remain} consultas disponíveis.*`
     },
     EN: {
-        usageLimit: '❌ You have already reached the limit of 10 free uses.',
+        usageLimit: (limit) => `❌ You have already reached the limit of ${limit} free uses.`,
         wrongChannel: '❌ This command can only be used in public consultation channels.',
         checking: '🔍 Checking ID...',
         whitelisted: '⚪ This user is on the **Whitelist** and is considered safe.',
@@ -42,11 +42,15 @@ module.exports = {
             return message.reply(t.wrongChannel);
         }
 
-        // 2. Controlo de Uso (Limite de 10)
+        // 2. Controlo de Uso (10 base + 1 por cada pessoa convidada)
         if (!isOwner) {
-            const usage = await getUserUsage(message.author.id);
-            if (usage >= 10) {
-                return message.reply(t.usageLimit);
+            const [usage, inviteBonus] = await Promise.all([
+                getUserUsage(message.author.id),
+                getInviteBonus(message.author.id)
+            ]);
+            const totalLimit = 10 + inviteBonus;
+            if (usage >= totalLimit) {
+                return message.reply(t.usageLimit(totalLimit));
             }
         }
 
@@ -107,9 +111,12 @@ module.exports = {
         // 6. Increment Usage if not owner
         if (!isOwner) {
             try {
+                const inviteBonus = await getInviteBonus(message.author.id);
+                const totalLimit = 10 + inviteBonus;
                 const newUsage = await incrementUserUsage(message.author.id);
-                response += t.usageLeft(10 - newUsage);
-                console.log(`[CHECK] Usage for ${message.author.id}: ${newUsage}/10`);
+                const remaining = totalLimit - newUsage;
+                response += t.usageLeft(remaining);
+                console.log(`[CHECK] Usage for ${message.author.id}: ${newUsage}/${totalLimit} (bonus: +${inviteBonus} convites)`);
 
                 // 7. STAFF LOGGING
                 const staffLogChannel = message.client.channels.cache.get(usageLogChannelId);
@@ -117,8 +124,9 @@ module.exports = {
                     const logMsg = `📝 **Usage Log:**\n` +
                         `👤 **User:** ${message.author.tag} (\`${message.author.id}\`)\n` +
                         `🔍 **Target ID:** \`${targetUserId}\`\n` +
-                        `📈 **Used:** ${newUsage}/10\n` +
-                        `📉 **Remaining:** ${10 - newUsage}\n` +
+                        `📈 **Used:** ${newUsage}/${totalLimit}\n` +
+                        `🎁 **Bonus (convites):** +${inviteBonus}\n` +
+                        `📉 **Remaining:** ${remaining}\n` +
                         `🌐 **Channel:** <#${message.channelId}>`;
                     staffLogChannel.send(logMsg).catch(err => console.error('[ERROR] Failed to send staff log:', err.message));
                 }

@@ -1,10 +1,18 @@
+if (typeof globalThis.File === 'undefined') {
+    globalThis.File = class File {
+        constructor(bits, filename, options = {}) {
+            this.name = filename || '';
+            this.lastModified = options.lastModified || Date.now();
+        }
+    };
+}
+
 const { Client, Collection } = require('discord.js-selfbot-v13');
 const fs = require('fs');
 const path = require('path');
 const { discordToken } = require('./config');
 
 const client = new Client({
-    // Self-bots don't use intents but partials help see everything
     partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
     checkUpdate: false,
 });
@@ -38,7 +46,7 @@ for (const file of eventFiles) {
     }
 }
 
-// Global error handling to prevent bot from crashing
+// Global error handling to prevent bot from crashing   
 process.on('unhandledRejection', error => {
     console.error('Unhandled promise rejection:', error);
 });

@@ -3,16 +3,18 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Discord self‑bot for spy‑bull (configured for DisCloud deployment)",
   "dependencies": {
-    "@supabase/supabase-js": "^2.95.3",
+    "@supabase/supabase-js": "^2.38.4",
     "debug": "^4.4.3",
     "discord.js-selfbot-v13": "^3.7.1",
-    "dotenv": "^17.2.4"
+    "dotenv": "^17.2.4",
+    "undici": "5.28.4"
   }
 }

@@ -77,8 +77,33 @@ module.exports = {
         let query = supabase.from('detection_logs').select('*').order('detected_at', { ascending: false });
         if (userId) query = query.eq('user_id', userId);
 
-        const { data } = await query.limit(10);
+        const { data, error } = await query.limit(10);
+        if (error) {
+            console.error('[DB ERROR] getDetectionHistory:', error.message);
+            return [];
+        }
         return data || [];
+    },
+
+    /**
+     * INVITE BONUS - Quantas pessoas o utilizador convidou (cada uma dá +1 uso do !check)
+     */
+    async getInviteBonus(userId) {
+        try {
+            const { count, error } = await supabase
+                .from('invite_referrals')
+                .select('*', { count: 'exact', head: true })
+                .eq('inviter_id', userId);
+
+            if (error) {
+                console.error('Error fetching invite_referrals:', error.message);
+                return 0;
+            }
+            return count ?? 0;
+        } catch (err) {
+            console.error('Database error in getInviteBonus:', err.message);
+            return 0;
+        }
     },
 
     /**
